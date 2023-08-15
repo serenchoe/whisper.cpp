@@ -30,6 +30,9 @@ endif()
 
 set_target_properties(${TARGET} PROPERTIES LINK_FLAGS " \
     --bind \
+    -s EXPORT_ES6=1 \
+    -s MODULARIZE=1 \
+    -s ENVIRONMENT='web,webview,worker' \
     -s USE_PTHREADS=1 \
     -s PTHREAD_POOL_SIZE=8 \
     -s INITIAL_MEMORY=1024MB \
