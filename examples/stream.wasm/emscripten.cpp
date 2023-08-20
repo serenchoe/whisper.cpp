@@ -103,6 +103,9 @@ void stream_main(size_t index) {
 
             {
                 const int n_segments = whisper_full_n_segments(ctx);
+                if (n_segments == 0) 
+                    continue;
+
                 for (int i = n_segments - 1; i < n_segments; ++i) {
                     const char * text = whisper_full_get_segment_text(ctx, i);
 
