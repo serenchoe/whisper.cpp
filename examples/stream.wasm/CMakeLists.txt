@@ -35,8 +35,8 @@ set_target_properties(${TARGET} PROPERTIES LINK_FLAGS " \
     -s ENVIRONMENT='web,webview,worker' \
     -s USE_PTHREADS=1 \
     -s PTHREAD_POOL_SIZE=8 \
-    -s INITIAL_MEMORY=1024MB \
-    -s TOTAL_MEMORY=1024MB \
+    -s INITIAL_MEMORY=2048MB \
+    -s TOTAL_MEMORY=2048MB \
     -s FORCE_FILESYSTEM=1 \
     -s EXPORTED_RUNTIME_METHODS=\"['print', 'printErr', 'ccall', 'cwrap']\" \
     ${EXTRA_FLAGS} \

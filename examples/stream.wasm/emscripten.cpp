@@ -62,7 +62,7 @@ void stream_main(size_t index) {
     auto & ctx = g_contexts[index];
 
     // 5 seconds interval
-    const int64_t window_samples = 5*WHISPER_SAMPLE_RATE;
+    const int64_t window_samples = 10*WHISPER_SAMPLE_RATE;
 
     while (g_running) {
         stream_set_status("waiting for audio ...");
