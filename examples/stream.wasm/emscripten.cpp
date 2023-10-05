@@ -77,6 +77,8 @@ void stream_main(size_t index) {
 
                 continue;
             }
+            if ((int64_t) g_pcmf32.size() > window_samples) 
+                printf("Audio buffer dropped...");
 
             pcmf32 = std::vector<float>(g_pcmf32.end() - std::min((int64_t) g_pcmf32.size(), window_samples), g_pcmf32.end());
             g_pcmf32.clear();
