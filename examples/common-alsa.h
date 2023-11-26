@@ -1,7 +1,5 @@
 #pragma once
 
-// #include <SDL.h>
-// #include <SDL_audio.h>
 #include <alsa/asoundlib.h>
 
 #include <atomic>
@@ -9,10 +7,6 @@
 #include <vector>
 #include <mutex>
 #include <thread>
-
-//
-// SDL Audio capture
-//
 
 class audio_async {
 public:
@@ -27,9 +21,6 @@ public:
     bool pause();
     bool clear();
 
-    // // callback to be called by SDL
-    // void callback(uint8_t * stream, int len);
-
     // get audio data from the circular buffer
     void get(int ms, std::vector<float> & audio);
 
@@ -43,10 +34,8 @@ private:
     std::atomic_bool m_exit;
     std::thread capture;
 
-    // SDL_AudioDeviceID m_dev_id_in = 0;
 
     int m_len_ms = 0;
-    // int m_sample_rate = 0;
 
     std::atomic_bool m_running;
     std::mutex       m_mutex;
