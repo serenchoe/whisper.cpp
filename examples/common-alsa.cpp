@@ -157,8 +157,8 @@ void audio_async::captureLoop() {
         stream = (uint8_t*) buffer.data();
         const size_t n_samples = readBufferSize;
 
-        m_audio_new.resize(n_samples);
-        memcpy(m_audio_new.data(), buffer.data(), n_samples * sizeof(float));
+        // m_audio_new.resize(n_samples);
+        // memcpy(m_audio_new.data(), buffer.data(), n_samples * sizeof(float));
 
         //fprintf(stderr, "%s: %zu samples, pos %zu, len %zu\n", __func__, n_samples, m_audio_pos, m_audio_len);
 
