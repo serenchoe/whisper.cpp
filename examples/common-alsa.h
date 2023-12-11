@@ -33,7 +33,7 @@ private:
     snd_pcm_t *captureHandle;
     unsigned int sampleRate;
     snd_pcm_uframes_t bufferSize;
-    std::vector<float> buffer;
+    // std::vector<float> buffer;
     std::atomic_bool m_exit;
     std::thread capture;
 

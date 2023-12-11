@@ -54,7 +54,7 @@ bool audio_async::init(int capture_id, int sample_rate) {
 
     snd_pcm_hw_params_free(hwParams);
 
-    buffer.resize(bufferSize);
+    // buffer.resize(bufferSize);
 
     m_audio.resize((sampleRate*m_len_ms)/1000);
 
@@ -137,6 +137,7 @@ void audio_async::captureLoop() {
 
     std::cout << "captureLoop() started"  << std::endl;
 
+    #if 0
     while (true) {
 
         if (m_exit)
@@ -185,6 +186,60 @@ void audio_async::captureLoop() {
             // std::cout << "<" << m_audio_pos << "," << n_samples << "," << m_audio.size() << ">" << std::endl;
         }
     }
+    #else
+    while (true) {
+
+        if (m_exit)
+            break;
+
+        // Process captured audio in buffer here...
+        if (!m_running) {
+            continue;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+
+            // std::cout << "m_audio.size(): " << m_audio.size() << std::endl;
+            // std::cout << "m_audio_pos: " << m_audio_pos << std::endl;
+            // std::cout << "m_audio_len: " << m_audio_len << std::endl;
+            // std::cout << "n_samples: " << n_samples  << std::endl;
+
+            if (m_audio_pos + bufferSize > m_audio.size()) {
+                const size_t n0 = m_audio.size() - m_audio_pos;
+
+                int readBufferSize = snd_pcm_readi(captureHandle, &m_audio[m_audio_pos], n0);
+                if (readBufferSize < 0) {
+                    std::cerr << "Capture error: " << snd_strerror(readBufferSize) << std::endl;
+                }
+
+                if (readBufferSize < n0)
+                    std::cout << "readBufferSize: " << readBufferSize  << std::endl;
+
+                m_audio_pos = (m_audio_pos + readBufferSize) % m_audio.size();
+                m_audio_len = m_audio.size();
+
+                // std::cout << "<" << m_audio_pos << "," << n0 << "," << m_audio.size() << ">" << std::endl;
+            } else {
+                int readBufferSize = snd_pcm_readi(captureHandle, &m_audio[m_audio_pos], bufferSize);
+                if (readBufferSize < 0) {
+                    std::cerr << "Capture error: " << snd_strerror(readBufferSize) << std::endl;
+                }
+
+                if (readBufferSize < bufferSize)
+                    std::cout << "readBufferSize: " << readBufferSize  << std::endl;
+
+                m_audio_pos = (m_audio_pos + readBufferSize) % m_audio.size();
+                m_audio_len = std::min(m_audio_len + readBufferSize, m_audio.size());
+
+                // std::cout << "<" << m_audio_pos << "," << bufferSize << "," << m_audio.size() << ">" << std::endl;
+            }
+
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    #endif
 }
 
 
@@ -230,7 +285,7 @@ void audio_async::get(int ms, std::vector<float> & result) {
         } else {
             memcpy(result.data(), &m_audio[s0], n_samples * sizeof(float));
         }
-        // std::cout << "[" << m_audio_pos << "," << n_samples << "," << m_audio.size() << "]" << std::endl;
+        // std::cout << "get - [" << m_audio_pos << "," << n_samples << "," << m_audio.size() << "]" << std::endl;
     }
 }
 
@@ -260,6 +315,8 @@ size_t audio_async::getSize(int ms) {
         if (n_samples > m_audio_len) {                  // if sampes to read is larger than samples available from m_audio vector
             n_samples = m_audio_len;
         }
+
+        // std::cout << "getSize - [" << m_audio_pos << "," << n_samples << "," << m_audio.size() << "]" << std::endl;
 
         return n_samples;
     }
