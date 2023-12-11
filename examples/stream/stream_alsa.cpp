@@ -159,9 +159,9 @@ int main(int argc, char ** argv) {
 
     struct whisper_context * ctx = whisper_init_from_file(params.model.c_str());
 
-    std::vector<float> pcmf32    (n_samples_30s, 0.0f);
-    std::vector<float> pcmf32_old;
-    std::vector<float> pcmf32_new(n_samples_30s, 0.0f);
+    std::vector<float> pcmf32    (n_samples_30s, 0.0f);                 // pcmf32 buffer used for inference
+    std::vector<float> pcmf32_old;                                      // pcmf32 used in previous inference
+    std::vector<float> pcmf32_new(n_samples_30s, 0.0f);                 // pcmf32 buffer newly read by audio.get() function
 
     std::vector<whisper_token> prompt_tokens;
 
@@ -226,15 +226,19 @@ int main(int argc, char ** argv) {
         // process new audio
 
         if (!use_vad) {
+
+            #if 0 
+            // repeatedly read audio data till its size is bigger than n_samples_step size. This make unnecessary memcopy  
             while (true) {
                 audio.get(params.step_ms, pcmf32_new);
 
+                // newly read audio data is too much then just drop/clear them and continue to loop
                 if ((int) pcmf32_new.size() > 2*n_samples_step) {
                     fprintf(stderr, "\n\n%s: WARNING: cannot process audio fast enough, dropping audio ...\n\n", __func__);
                     audio.clear();
                     continue;
                 }
-
+                // if audio data is properly accumulated then exit while loop
                 if ((int) pcmf32_new.size() >= n_samples_step) {
                     audio.clear();
                     break;
@@ -242,20 +246,46 @@ int main(int argc, char ** argv) {
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
+            #else
+            while (true) {
+                size_t cirBufSize = audio.getSize(params.step_ms);
 
+                // newly read audio data is too much then just drop/clear them and continue to loop
+                if ((int) cirBufSize > 2*n_samples_step) {
+                    fprintf(stderr, "\n\n%s: WARNING: cannot process audio fast enough, dropping audio ...\n\n", __func__);
+                    audio.clear();
+                    continue;
+                }
+                // if audio data is properly accumulated then exit while loop
+                if ((int) cirBufSize >= n_samples_step) {
+
+                    audio.get(params.step_ms, pcmf32_new);
+                    audio.clear();
+                    break;
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            #endif
+
+            // this is the size of newly read samples(frames) 
             const int n_samples_new = pcmf32_new.size();
 
             // take up to params.length_ms audio from previous iteration
+            // this is the size of samples to take from previous turn. n_samples_take is min 0 and max pcmf32_old.size()
+            // n_samples_len is normally way much bigger than pcmf32_old.size(). So this value will be normally pcmf32_old.size().
             const int n_samples_take = std::min((int) pcmf32_old.size(), std::max(0, n_samples_keep + n_samples_len - n_samples_new));
 
-            //printf("processing: take = %d, new = %d, old = %d\n", n_samples_take, n_samples_new, (int) pcmf32_old.size());
+            // printf("processing: take = %d, new = %d, old = %d\n", n_samples_take, n_samples_new, (int) pcmf32_old.size());
 
             pcmf32.resize(n_samples_new + n_samples_take);
 
+            // copy n_samples_take from previous pcmf32 to pcmf32[0]  ~ pcmf32[n_samples_take-1]
             for (int i = 0; i < n_samples_take; i++) {
                 pcmf32[i] = pcmf32_old[pcmf32_old.size() - n_samples_take + i];
             }
 
+            // append n_samples_new frames to pcmf32 
             memcpy(pcmf32.data() + n_samples_take, pcmf32_new.data(), n_samples_new*sizeof(float));
 
             pcmf32_old = pcmf32;

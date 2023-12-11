@@ -1,3 +1,4 @@
+#include <iostream>
 #include "common-sdl.h"
 
 audio_async::audio_async(int len_ms) {
@@ -163,6 +164,7 @@ void audio_async::callback(uint8_t * stream, int len) {
             m_audio_pos = (m_audio_pos + n_samples) % m_audio.size();
             m_audio_len = std::min(m_audio_len + n_samples, m_audio.size());
         }
+        std::cout << "<" << m_audio_pos << "," << n_samples << "," << m_audio.size() << ">" << std::endl;
     }
 }
 
@@ -206,6 +208,7 @@ void audio_async::get(int ms, std::vector<float> & result) {
         } else {
             memcpy(result.data(), &m_audio[s0], n_samples * sizeof(float));
         }
+        std::cout << "[" << m_audio_pos << "," << n_samples << "," << m_audio.size() << "]" << std::endl;        
     }
 }
 

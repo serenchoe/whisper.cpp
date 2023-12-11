@@ -24,6 +24,9 @@ public:
     // get audio data from the circular buffer
     void get(int ms, std::vector<float> & audio);
 
+    // get audio data size available from the circular buffer
+    size_t getSize(int ms);
+
     void captureLoop();
 
 private:
@@ -41,7 +44,6 @@ private:
     std::mutex       m_mutex;
 
     std::vector<float> m_audio;
-    // std::vector<float> m_audio_new;
     size_t             m_audio_pos = 0;
     size_t             m_audio_len = 0;
 };

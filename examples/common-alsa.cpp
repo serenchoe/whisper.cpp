@@ -130,7 +130,8 @@ bool audio_async::clear() {
     return true;
 }
 
-
+// this reads pcm frames to `buffer` first and then copies to circular buffer - m_audio.
+// it would enhance performance if pcm frames could be read int to circular buffer directly.  
 void audio_async::captureLoop() {
     uint8_t *stream;
 
@@ -157,9 +158,6 @@ void audio_async::captureLoop() {
         stream = (uint8_t*) buffer.data();
         const size_t n_samples = readBufferSize;
 
-        // m_audio_new.resize(n_samples);
-        // memcpy(m_audio_new.data(), buffer.data(), n_samples * sizeof(float));
-
         //fprintf(stderr, "%s: %zu samples, pos %zu, len %zu\n", __func__, n_samples, m_audio_pos, m_audio_len);
 
         {
@@ -167,6 +165,7 @@ void audio_async::captureLoop() {
 
             // std::cout << "m_audio.size(): " << m_audio.size() << std::endl;
             // std::cout << "m_audio_pos: " << m_audio_pos << std::endl;
+            // std::cout << "m_audio_len: " << m_audio_len << std::endl;
             // std::cout << "n_samples: " << n_samples  << std::endl;
 
             if (m_audio_pos + n_samples > m_audio.size()) {
@@ -183,11 +182,13 @@ void audio_async::captureLoop() {
                 m_audio_pos = (m_audio_pos + n_samples) % m_audio.size();
                 m_audio_len = std::min(m_audio_len + n_samples, m_audio.size());
             }
+            // std::cout << "<" << m_audio_pos << "," << n_samples << "," << m_audio.size() << ">" << std::endl;
         }
-
     }
 }
 
+
+// this function copies frames in m_audio to result
 void audio_async::get(int ms, std::vector<float> & result) {
 
     if (!captureHandle) {
@@ -229,8 +230,41 @@ void audio_async::get(int ms, std::vector<float> & result) {
         } else {
             memcpy(result.data(), &m_audio[s0], n_samples * sizeof(float));
         }
+        // std::cout << "[" << m_audio_pos << "," << n_samples << "," << m_audio.size() << "]" << std::endl;
     }
 }
+
+
+
+// get audio data size available from the circular buffer
+size_t audio_async::getSize(int ms) {
+
+    if (!captureHandle) {
+        fprintf(stderr, "%s: no audio device to get audio from!\n", __func__);
+        return 0;
+    }
+
+    if (!m_running) {
+        fprintf(stderr, "%s: not running!\n", __func__);
+        return 0;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        if (ms <= 0) {
+            ms = m_len_ms;
+        }
+
+        size_t n_samples = (sampleRate * ms) / 1000;    // samples to read from m_audio vector
+        if (n_samples > m_audio_len) {                  // if sampes to read is larger than samples available from m_audio vector
+            n_samples = m_audio_len;
+        }
+
+        return n_samples;
+    }
+}
+
 
 bool sdl_poll_events() {
 
